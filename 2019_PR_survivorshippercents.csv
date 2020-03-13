@@ -1,0 +1,41 @@
+﻿genotype,morphology,treatment,percent
+AZ,g,raceway percent,50
+AZ,g,cage percent,66.66666667
+AZ,g,field percent,6.666666667
+AZ,g,known field percent,12.5
+BY,t,raceway percent,100
+BY,t,cage percent,100
+BY,t,field percent,17.85714286
+BY,t,known field percent,27.77777778
+CX,t,raceway percent,100
+CX,t,cage percent,100
+CX,t,field percent,10
+CX,t,known field percent,12.5
+DW,t,raceway percent,100
+DW,t,cage percent,100
+DW,t,field percent,20
+DW,t,known field percent,45.45454545
+EV,g,raceway percent,54.54545455
+EV,g,cage percent,100
+EV,g,field percent,4
+EV,g,known field percent,6.25
+FU,t,raceway percent,80
+FU,t,cage percent,95.12195122
+FU,t,field percent,23.07692308
+FU,t,known field percent,40
+GT,t,raceway percent,60
+GT,t,cage percent,100
+GT,t,field percent,23.07692308
+GT,t,known field percent,28.57142857
+HS,t,raceway percent,90
+HS,t,cage percent,100
+HS,t,field percent,52
+HS,t,known field percent,61.9047619
+IR,t,raceway percent,80
+IR,t,cage percent,100
+IR,t,field percent,32
+IR,t,known field percent,36.36363636
+JQ,t,raceway percent,92.30769231
+JQ,t,cage percent,100
+JQ,t,field percent,22.22222222
+JQ,t,known field percent,40
