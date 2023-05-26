@@ -1,0 +1,198 @@
+---
+title: "posthoc_rmd"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#load required packages
+library(tidyr)
+library(ggplot2)
+library(magrittr)
+library(reshape2)
+library(lubridate)
+library(plyr)
+library(dplyr)
+library(survival)
+library("survminer")
+library(multcomp)
+library(agricolae)
+library(gt)
+library(kableExtra)
+```
+
+```{r}
+#load survminer data 
+survminer_all <- read.csv("2019_PR_survminer_all.csv")
+
+#make sure all categorical variables are being read as factors
+survminer_all$genotype <- as.factor(survminer_all$genotype)
+survminer_all$location <- as.factor(survminer_all$location)
+survminer_all$acclimation <- as.factor(survminer_all$acclimation)
+
+#make all days.alive values be out of 100%
+survminer_all$perc.days <- survminer_all$days.alive/126
+
+#logit transform days.alive since it exhibits binomial distribution
+survminer_all$logit.days <- log(survminer_all$perc.days/(1 - survminer_all$perc.days))
+
+#create new data frame and remove rows with missing data (NaN)
+survminer_all2 <- survminer_all[complete.cases(survminer_all), ]
+
+#change inf values to NA
+is.na(survminer_all2) <- sapply(survminer_all2, is.infinite)
+
+#change NA values to 0
+survminer_all2[is.na(survminer_all2)] = 0
+
+#load growth data
+growth_cage <- read.csv("2019_PR_Ofav_growth_CAGE.csv")
+growth_field <- read.csv("2019_PR_Ofav_growth_FIELD.csv")
+
+#reformat all dates to POSIXt format using lubridate
+growth_cage$ymd.date=mdy(growth_cage$date)
+growth_field$ymd.date=mdy(growth_field$date)
+
+#calculate individual growth rates on cage data
+growth_cage <- ddply(growth_cage,"coral.ID",transform,
+         growth=c(NA,exp(diff(log(area)))-1))
+
+#calculate individual growth rates on field data
+growth_field <- ddply(growth_field,"coral.ID",transform,
+         growth=c(NA,exp(diff(log(area)))-1))
+
+#combine cage and field data into one dataset
+growth_total <- rbind(growth_cage, growth_field)
+
+#make second growth dataframe with no NA/NaN/Inf values
+#remove rows with missing data (NaN)
+growth_total2 <- growth_total[complete.cases(growth_total), ]
+
+#change inf values to NA
+is.na(growth_total2) <- sapply(growth_total2, is.infinite)
+
+#change NA values to 0 since these are corals that died and were re-cut (i.e. the 'second' value is actually a new coral, not growth)
+growth_total2[is.na(growth_total2)] = 0
+```
+
+```{r}
+#Tukey's HSD for survival (days alive) between genotypes
+#define the model
+agr_s2 <- aov(logit.days ~ genotype, survminer_all2)
+
+#Tukey's HSD
+survHSD <- HSD.test(agr_s2, "genotype", console = TRUE)
+
+#export results as dataframe
+as.data.frame(survHSD$groups)
+```
+
+```{r}
+#Tukey's HSD for survival (days alive) between acclimation treatments
+#define the model
+agr_s3 <- aov(logit.days ~ acclimation, survminer_all2)
+
+#Tukey's HSD
+survHSD_2 <- HSD.test(agr_s3, "acclimation", console = TRUE)
+```
+
+```{r}
+#Tukey's HSD for survival (days alive) between locations
+#define the model
+agr_s4 <- aov(logit.days ~ location, survminer_all2)
+
+#Tukey's HSD
+survHSD_3 <- HSD.test(agr_s4, "location", console = TRUE)
+```
+
+```{r}
+#Tukey's HSD for growth by genotype
+#define the model
+agr_g1 <- aov(growth ~ genotype, data = growth_total2)
+
+#Tukey's HSD
+growthHSD <- HSD.test(agr_g1, "genotype", console = TRUE)
+```
+
+```{r}
+#Tukey's HSD for growth by location
+#define the model
+agr_g2 <- aov(growth ~ location, data = growth_total2)
+
+#Tukey's HSD
+growthHSD2 <- HSD.test(agr_g2, "location", console = TRUE)
+```
+
+```{r}
+#Tukey's HSD for growth by acclimation treatment
+#define the model
+agr_g3 <- aov(growth ~ acclimation, data = growth_total2)
+
+#Tukey's HSD
+growthHSD3 <- HSD.test(agr_g3, "acclimation", console = TRUE)
+```
+
+```{r kable example}
+#dt %>%
+  #kbl(caption = "Recreating booktabs style table") %>%
+  #kable_classic(full_width = F, html_font = "Cambria")
+```
+
+```{r surv gen table}
+#load remade dataframe 
+survHSD_a <- read.csv("2019_PR_survgenHSD.csv")
+survHSD_a %>%
+  kbl(caption = "Fragment survivorship compared between genotype, using ANOVA and Tukey's HSD") %>% kable_classic(full_width = F, html_font = "Cambria")
+```
+
+```{r surv acc table}
+#load remade dataframe 
+survHSD_acc <- read.csv("2019_PR_survaccHSD.csv")
+survHSD_acc %>%
+  kbl(caption = "Fragment survivorship compared between acclimation treatments, using ANOVA and Tukey's HSD") %>% kable_classic(full_width = F, html_font = "Cambria")
+```
+
+```{r growth acc table}
+#load remade dataframe 
+growthHSD_acc <- read.csv("2019_PR_growthaccHSD.csv")
+growthHSD_acc %>%
+  kbl(caption = "Fragment growth compared between acclimation treatments, using ANOVA and Tukey's HSD") %>% kable_classic(full_width = F, html_font = "Cambria")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.

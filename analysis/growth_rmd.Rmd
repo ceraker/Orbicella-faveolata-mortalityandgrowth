@@ -1,0 +1,355 @@
+---
+title: "growth_rmd"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+#load required packages
+library(tidyr)
+library(ggplot2)
+library(magrittr)
+library(reshape2)
+library(lubridate)
+library(plyr)
+library(dplyr)
+library(survival)
+library("survminer")
+library(viridisLite)
+library(reshape2)
+library(directlabels)
+library(multcomp)
+library(broom)
+```
+
+```{r}
+#load DataCombine
+library(DataCombine)
+```
+
+```{r}
+#load cage growth data
+growth_cage <- read.csv("2019_PR_Ofav_growth_CAGE.csv")
+growth_field <- read.csv("2019_PR_Ofav_growth_FIELD.csv")
+```
+
+```{r}
+#reformat all dates to POSIXt format using lubridate
+growth_cage$ymd.date=mdy(growth_cage$date)
+growth_field$ymd.date=mdy(growth_field$date)
+```
+
+```{r}
+#summarize cage data
+summary(growth_cage)
+```
+
+```{r}
+#summarize field data
+summary(growth_field)
+```
+
+```{r}
+#calculate individual growth rates on cage data
+growth_cage <- ddply(growth_cage,"coral.ID",transform,
+         growth=c(NA,exp(diff(log(area)))-1))
+```
+
+```{r}
+#calculate individual growth rates on field data
+growth_field <- ddply(growth_field,"coral.ID",transform,
+         growth=c(NA,exp(diff(log(area)))-1))
+```
+
+```{r}
+#calculate individual growth rates on total data
+growth_total <- ddply(growth_total,"coral.ID",transform,
+         growth=c(NA,exp(diff(log(area)))-1))
+```
+
+```{r}
+#group cage data by acclimation, genotype, and then by date
+growth_cage_grouped <- group_by(growth_cage, acclimation, genotype, ymd.date)
+View(growth_cage_grouped)
+```
+
+```{r}
+#summarize grouped cage data
+growth_cage_summary <- summarise(growth_cage_grouped, N=length(area), Average=mean(area), StDev=sd(area))
+View(growth_cage_summary)
+```
+
+```{r}
+#plot average growth
+ggplot(data=growth_cage_summary, aes(x=ymd.date, y=Average, color=genotype)) + 
+       geom_line() + 
+       labs(x="Date", y="Average Area in Sq. Cm.")
+```
+
+```{r}
+#average growth of first two acclimation groups by genotype
+df <- growth_cage_summary
+g1 <- ggplot(subset(df, acclimation %in% c("1","2")), aes(x=ymd.date, y=Average, color=genotype)) + 
+       geom_line() + 
+       facet_grid(acclimation ~ .) +
+       labs(x="Date", y="Average Area in Sq. Cm.")
+g1 <- g1 + theme(legend.position = "none")
+g1 <- g1 + geom_dl(aes(label = genotype), method = list('last.bumpup', dl.combine("last.points"), cex = 0.8))
+g1
+```
+
+```{r}
+#group field data by acclimation, genotype, and then by date
+growth_field_grouped <- group_by(growth_field, acclimation, genotype, ymd.date)
+```
+
+```{r}
+#summarise grouped field data
+growth_field_summary <- summarise(growth_field_grouped, N=length(area), Average=mean(area), StDev=sd(area))
+View(growth_field_summary)
+```
+
+```{r}
+#average field growth by genotype
+df <- growth_field_summary
+g2 <- ggplot(df, aes(x=ymd.date, y=Average, color=genotype)) + 
+       geom_line() + 
+       facet_grid(acclimation ~ .) +
+       labs(x="Date", y="Average Area in Sq. Cm.")
+g2 <- g2 + theme(legend.position = "none")
+g2 <- g2 + geom_dl(aes(label = genotype), method = list('last.bumpup', dl.combine("last.points"), cex = 0.8))
+g2
+```
+
+```{r}
+#combine cage and field data into one dataset
+growth_total <- rbind(growth_cage, growth_field)
+View(growth_total)
+```
+
+```{r}
+#group total data by location, genotype, and then by date
+growth_total_grouped <- group_by(growth_total, location, acclimation, genotype, ymd.date)
+```
+
+```{r}
+#summarise grouped total data
+growth_total_summary <- summarise(growth_total_grouped, N=length(area), Average=mean(area), StDev=sd(area))
+View(growth_total_summary)
+```
+
+```{r}
+#average total growth by location
+df <- growth_total_summary
+g3 <- ggplot(df, aes(x=ymd.date, y=Average, color=genotype)) + 
+       geom_line() + 
+       facet_grid(acclimation ~ .) +
+       labs(x="Date", y="Average Area (cm2)")
+g3 <- g3 + theme(legend.position = "none")
+g3 <- g3 + geom_dl(aes(label = genotype), method = list('last.bumpup', dl.combine("last.points"), cex = 0.8))
+g3
+```
+
+```{r}
+#box plot comparing growth rates in cage and in field
+b2 <- ggplot(growth_total, aes(x = location, y = growth, color = location)) +
+  geom_boxplot() +
+  geom_jitter()
+b2
+```
+
+```{r}
+#box plot comparing growth rates between genotypes
+b3 <- ggplot(growth_total, aes(x = genotype, y = growth, color = genotype)) +
+  geom_boxplot() +
+  geom_jitter()
+b3
+```
+
+```{r}
+#change acclimation to categorical variable
+growth_total$acclimation <- as.factor(growth_total$acclimation)
+growth_cage$acclimation <- as.factor(growth_cage$acclimation)
+growth_field$acclimation <- as.factor(growth_field$acclimation)
+```
+
+```{r}
+#box plot comparing growth rates between acclimation times
+b4 <- ggplot(growth_total, aes(x = acclimation, y = growth, color = acclimation)) +
+  geom_boxplot() +
+  geom_jitter()
+b4 <- b4 + stat_compare_means(aes(label = paste0("p = ", ..p.format..)), label.x = 1, label.y = 2.7)
+b4
+```
+
+```{r}
+#box plot comparing growth rates between acclimation times only in cage
+b5 <- ggplot(growth_cage, aes(x = acclimation, y = growth, color = acclimation)) +
+  geom_boxplot() +
+  geom_jitter()
+b5
+```
+
+```{r}
+#box plot comparing growth rates between genotypes only in cage
+b6 <- ggplot(growth_cage, aes(x = genotype, y = growth, color = genotype)) +
+  geom_boxplot() +
+  geom_jitter()
+b6
+```
+```{r}
+#box plot comparing growth rates between genotypes only in field
+b7 <- ggplot(growth_field, aes(x = genotype, y = growth, color = genotype)) +
+  geom_boxplot() +
+  geom_jitter()
+b7
+```
+
+```{r}
+#summary of cage growth data
+summary(growth_cage)
+```
+
+```{r}
+#summary of field growth data
+summary(growth_field)
+```
+
+```{r}
+#mean of growth rates
+growth_cage$growth[sapply(growth_cage$growth, is.infinite)] <- NA
+mean(growth_cage$growth, na.rm = TRUE)
+```
+
+```{r}
+#mean of growth rates
+growth_field$growth[sapply(growth_field$growth, is.infinite)] <- NA
+mean(growth_field$growth, na.rm = TRUE)
+```
+
+```{r}
+#plot average growth over time
+ggplot(data=growth_total, aes(x=ymd.date, y=growth, color=genotype)) + 
+       geom_line() + 
+       labs(x="Date", y="Average Growth Rate (cm2/day)")
+```
+```{r}
+#plot average cage growth over time
+ggplot(data=growth_cage, aes(x=ymd.date, y=growth, color=genotype)) + 
+       geom_line() + 
+       labs(x="Date", y="Average Growth Rate (cm2/day)")
+```
+
+```{r}
+#plot average field growth over time
+ggplot(data=growth_field, aes(x=ymd.date, y=growth, color=genotype)) + 
+       geom_line() + 
+       labs(x="Date", y="Average Growth Rate (cm2/day)")
+```
+
+```{r}
+#one-way anova to check within genotype variance
+one.way <- aov(growth ~ genotype, data = growth_total)
+summary(one.way)
+```
+
+#POST-HOC ANALYSIS
+
+```{r}
+#install proper packages
+install.packages("agricolae", dependencies = TRUE)
+install.packages("fastmap")
+```
+
+```{r}
+#load packages
+library(agricolae)
+```
+
+```{r}
+#make second growth dataframe with no NA/NaN/Inf values
+#remove rows with missing data (NaN)
+growth_total2 <- growth_total[complete.cases(growth_total), ]
+```
+
+```{r}
+#change inf values to NA
+is.na(growth_total2) <- sapply(growth_total2, is.infinite)
+```
+
+```{r}
+#change NA values to 0 since these are corals that died and were re-cut (i.e. the 'second' value is actually a new coral, not growth)
+growth_total2[is.na(growth_total2)] = 0
+```
+
+```{r}
+#make the model
+agr_g1 <- aov(growth ~ genotype, data = growth_total2)
+cv.model(agr_g1)
+```
+
+```{r}
+#Tukey's HSD
+growthHSD <- HSD.test(agr_g1, "genotype", console = TRUE)
+```
+
+```{r}
+#make model using acclimation treatment
+agr_g2 <- aov(growth ~ acclimation, data = growth_total2)
+
+#Tukey's HSD
+growthHSD_acc <- HSD.test(agr_g2, "acclimation", console = TRUE)
+```
+
+#NORMALIZE DATA YOU IDIOT
+```{r}
+hist_g1 <- ggplot(growth_total2, aes(growth)) +
+  geom_histogram()
+
+hist_g1
+```
+
+```{r}
+#try calculating percent growth using DataCombine package
+#PercChange(data, Var, GroupVar, NewVar, slideBy = -1, type = "percent", ...)
+PercChange(growth_total, Var = area, GroupVar = genotype, NewVar = perc.growth, type = 'percent')
+#Error in match(x, table, nomatch = 0L) : 'match' requires vector arguments
+```
+
+```{r}
+#create percent growth column by multiplying growth rate by 100 (also I am an idiot)
+growth_total$perc.growth <- growth_total$growth*100
+growth_total$acclimation <- as.factor(growth_total$acclimation)
+View(growth_total)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.

@@ -1,0 +1,200 @@
+---
+title: "modeling_GF"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#load required packages
+library(tidyr)
+library(ggplot2)
+library(magrittr)
+library(reshape2)
+library(lubridate)
+library(plyr)
+library(dplyr)
+library(survival)
+library("survminer")
+library(multcomp)
+library(agricolae)
+library(flexsurv)
+library(stats)
+```
+
+```{r}
+library(fitdistrplus)
+```
+
+```{r}
+#load survminer formatted field data
+survminer_field <- read.csv("2019_PR_survminer_field.csv")
+
+#reformat all dates to POSIXt format using lubridate and delete old columns
+survminer_field$ymd.planted=mdy(survminer_field$date.planted)
+survminer_field$ymd.mortality=mdy(survminer_field$date.of.mortality)
+```
+
+```{r}
+#calculate number of days between planting and mortality 
+survminer_field$days.alive <- difftime(survminer_field$ymd.mortality ,survminer_field$ymd.planted , units = c("days"))
+
+#load total survminer data
+survminer_all <- read.csv("2019_PR_survminer_all.csv")
+```
+
+```{r}
+# Diagnostics of Cox model (all data), all variables
+surv_cox <- Surv(survminer_all$days.alive, survminer_all$censored)
+
+fit_cox <- coxph(surv_cox ~ location + acclimation + genotype, data = survminer_all)
+
+#summary of cox model
+summary(fit_cox)
+```
+
+```{r}
+# Diagnostics of Cox model (all data), location and genotype
+surv_cox <- Surv(survminer_all$days.alive, survminer_all$censored)
+
+fit_cox_locgen <- coxph(surv_cox ~ location + genotype, data = survminer_all)
+
+#summary of cox model
+summary(fit_cox_locgen)
+```
+
+```{r}
+#compare models to see if acclimation has statistically significant effect 
+anova(fit_cox, fit_cox_locgen, test="LRT")
+#can drop acclimation from model 
+```
+
+```{r}
+# Diagnostics of Cox model (all data), only location
+surv_cox <- Surv(survminer_all$days.alive, survminer_all$censored)
+
+fit_cox_loc <- coxph(surv_cox ~ location, data = survminer_all)
+
+#summary of cox model
+summary(fit_cox_loc)
+```
+
+```{r}
+#compare models to see if genotype has statistically significant effect 
+anova(fit_cox_loc, fit_cox_locgen, test="LRT")
+#cannot drop genotype from model, fit_cox_locgen is best
+```
+
+```{r}
+#ftest of cox model
+ftest <- cox.zph(fit_cox_locgen)
+ftest
+ggcoxzph(ftest)
+```
+
+```{r}
+#more plots of residuals (all data)
+ggcoxdiagnostics(fit_cox_locgen, type = "deviance", ox.scale = "linear.predictions")
+
+ggcoxdiagnostics(fit_cox_locgen, type = "schoenfeld", ox.scale = "time")
+```
+
+```{r}
+#summary of cox model (all data), not including acclimation (no significant affect)
+fit_cox2 <- coxph(surv_cox ~ location + genotype, data = survminer_all)
+fit_cox2
+ggforest(fit_cox2)
+```
+
+```{r}
+# Diagnostics of Cox model (field data), acclimation and genotype
+surv_cox2 <- Surv(survminer_field$days.alive, survminer_field$censored)
+
+field_cox_genacc <- coxph(surv_cox2 ~ genotype + acclimation, data = survminer_field)
+
+#summary of Cox model (field data)
+summary(field_cox_genacc)
+```
+
+```{r}
+# Diagnostics of Cox model (field data), only genotype
+surv_cox2 <- Surv(survminer_field$days.alive, survminer_field$censored)
+
+field_cox_gen <- coxph(surv_cox2 ~ genotype, data = survminer_field)
+
+#summary of Cox model (field data)
+summary(field_cox_gen)
+```
+
+```{r}
+#compare models to see if acclimation has statistically significant effect 
+anova(field_cox_gen, field_cox_genacc, test="LRT")
+#can drop acclimation from model, does not have significant affect, field_cox_gen is best
+```
+
+```{r}
+#ftest of Cox model (field data)
+ftest <- cox.zph(field_cox_gen)
+ftest
+ggcoxzph(ftest)
+```
+
+```{r}
+#more plots of residuals (field data)
+ggcoxdiagnostics(field_cox_gen, type = "deviance", ox.scale = "linear.predictions")
+
+ggcoxdiagnostics(field_cox_gen, type = "schoenfeld", ox.scale = "time")
+```
+
+```{r}
+#summary of cox model (field data)
+fit_cox4 <- coxph(surv_cox2 ~ genotype, data = survminer_field)
+fit_cox4
+ggforest(fit_cox4)
+```
+
+##PARAMETRIC MODELS
+```{r}
+#empirical distribution to help choose model: original data
+plotdist(survminer_all$days.alive, histo = TRUE, demp = TRUE)
+```
+```{r}
+#make all days.alive values be out of 100%
+survminer_all$perc.days <- survminer_all$days.alive/126
+
+#logit transform days.alive since it exhibits binomial distribution
+survminer_all$logit.days <- log(survminer_all$perc.days/(1 - survminer_all$perc.days))
+
+#create new data frame and remove rows with missing data (NaN)
+survminer_all2 <- survminer_all[complete.cases(survminer_all), ]
+
+#change inf values to NA
+is.na(survminer_all2) <- sapply(survminer_all2, is.infinite)
+
+#change NA values to 0
+survminer_all2[is.na(survminer_all2)] = 0
+```
+
+```{r}
+#empirical distribution to help choose model: log transformed data
+plotdist(survminer_all2$logit.days, histo = TRUE, demp = TRUE)
+```
+
+```{r}
+descdist(survminer_all$days.alive, boot = 1000)
+```
+
+```{r}
+descdist(survminer_all2$logit.days, boot = 1000)
+#positive skewness and kurtosis close to 3: consider Weibull, gamma, and lognormal distributions
+```
+
+```{r}
+#change all -1 values in survminer_all to 0
+survminer_all3 <- survminer_all
+survminer_all3[survminer_all3 == -1] <- 0
+
+descdist(survminer_all3$days.alive, boot = 1000)
+```
