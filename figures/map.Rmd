@@ -1,0 +1,142 @@
+---
+title: "Orbicella faveolata study location"
+author: "Cassie Raker"
+date: "2023-05-22"
+output: html_document
+---
+This script creates a map of lab, coral collection, and acclimation and outplant locations for our 2019 Orbicella faveolata restoration project. 
+
+## Load packages 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages(c("cowplot", "googleway", "ggplot2", "ggrepel", "ggspatial", "libwgeom", "sf", "rnaturalearth", "rnaturalearthdata", "spData", "tigris", ggsn"))
+library("cowplot")
+library("googleway")
+library("ggplot2")
+library("ggrepel")
+library("ggspatial")
+library("sf")
+library("rnaturalearth")
+library("rnaturalearthdata")
+library("tidyverse")
+library(dplyr)
+library("spData") #didn't end up needing this
+library("tigris") #didn't end up needing this
+library(readxl)
+library(grid)
+library(ggsn)
+#devtools::install_github("3wen/legendMap")
+library("legendMap")
+```
+
+## Load and subset data 
+```{r}
+mapdata <- read.csv('2019_PR_map.csv')
+#View(mapdata)
+```
+
+## Plot points 
+```{r}
+#set data
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+#main map
+mapplot <- ggplot(data = world) +
+  geom_sf() +
+  geom_point(data = mapdata, aes(x = long, y = lat, color = purpose), size = 4) +
+  theme(legend.position = "right") +
+  scale_color_manual(values = c("#4745C5","#5AA3C5","#F3AE00"), guide = guide_legend(reverse=TRUE), name = "Study Locations", labels = c("Mario Reef: caging and outplanting", "Turrumote Reef: coral collection", "UPR Isla Mayagues Laboratories")) +
+  coord_sf(xlim = c(-67, -67.075), ylim = c(17.92, 18), expand = FALSE) +
+  theme_linedraw() +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  theme(panel.background = element_rect(fill = "lightblue"))
+mapplot <- mapplot + annotate(geom = "text", x = -67.04, y = 17.975, label = "Puerto Rico") +
+  annotate(geom = "text", x = -67.05, y = 17.935, label = "Caribbean Sea")
+
+# Add scale and North arrow
+mapplot <- mapplot +
+  ggspatial::annotation_north_arrow(
+    location = "tr", which_north = "true",
+    pad_x = unit(0.1, "in"), pad_y = unit(0.5, "in"),
+    style = ggspatial::north_arrow_nautical(
+      fill = c("black", "white"),
+      line_col = "black")) +
+  scale_bar(lon = -67.024, lat = 17.992, 
+              distance_lon = 1, distance_lat = 0.2, distance_legend = 0.5, 
+              dist_unit = "km", orientation = FALSE)
+
+#edit axes tick marks
+mapplot <- mapplot + scale_y_continuous(breaks = seq(17.92, 18.00, by = .02)) +
+  scale_x_continuous(breaks = seq(-67.06, -67.00, by = .02))
+
+mapplot
+```
+
+```{r inset map}
+inset <- ggplot() + 
+  geom_sf(data = world) +
+  geom_point(data = mapdata, aes(x = long, y = lat, color = purpose), size = 1, color = c("#F3AE00","#5AA3C5","#4745C5")) +
+  xlim(-67.3, -65.6) +
+  ylim(17.8, 18.6) +
+  geom_rect(aes(xmin = -67.075, xmax = -67, ymin = 17.92, ymax = 18), color = "red", fill = NA) +
+  labs(x = NULL, y = NULL) +
+  theme_test() + 
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.ticks.length = unit(0, "pt"),
+        axis.title=element_blank(),
+        plot.margin = margin(0, 0, 0, 0, "cm"),
+        panel.background = element_rect(fill = "lightblue"))
+inset <- inset + annotate(geom = "text", x = -66.5, y = 18.2, size = 3, label = "Puerto Rico")
+inset
+```
+
+#combine maps 
+```{r}
+fig1 = ggdraw() +
+  draw_plot(mapplot) +
+  draw_plot(inset, x = 0.101, y = 0.7, width = 0.24, height = 0.24)
+fig1
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.

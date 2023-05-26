@@ -1,6 +1,8 @@
 ---
 title: "finalgraphs_rmd"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -9,7 +11,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## R Markdown
 
-
 ```{r}
 #load required packages
 library(tidyr)
@@ -17,260 +18,198 @@ library(ggplot2)
 library(magrittr)
 library(reshape2)
 library(lubridate)
+library(plyr)
 library(dplyr)
 library(survival)
-install.packages("survminer")
 library("survminer")
+library(viridisLite)
+library(directlabels)
+library(ggpubr)
+library(gridExtra)
+library(grid)
+library(ggrepel)
 ```
 
 ```{r}
-#load and view data
-survivorship <- read.csv('2019_PR_totalsurvivorship.csv')
-View(survivorship)
-```
+#load required data
+survivorship_percents_mario_known <- read.csv('survivorship_percents_mario_known')
 
-```{r}
-#load and view survivorship percent data
-survivorship_percents <- read.csv('2019_PR_survivorshippercents.csv')
-View(survivorship_percents)
-```
+survivorship_percents_mario_known$genotype <- c("AZ","BY","CX","DW","EV","FU","GT","HS","IR","JQ")
 
-```{r}
-#box plot of survivorship percents only including cage and known field 
-df <- survivorship_percents_mario_known
-b1 <- ggplot(df, aes(x = treatment, y = percent)) +
-  geom_boxplot() +
-  geom_jitter()
-b1 <- b1 + scale_x_discrete(name = "Fragment Location") + scale_y_continuous(name = "Percent Survivorship")
-b1
-```
-
-```{r}
-#load and view survivorship percent data broken down by acclimation treatment
-survivorship_percents_acc_known <- read.csv('2019_PR_survivorship_acc_known.csv')
-View(survivorship_percents_acc_known)
-```
-
-```{r}
-#make acclimation variable a factor
-survivorship_percents_acc_known$acclimation <- as.factor(survivorship_percents_acc_known$acclimation)
-```
-
-```{r}
-#load and view field survivorship percent data broken down by acclimation treatment
-survivorship_percents_acc_field <- read.csv('2019_PR_survivorship_acc_field.csv')
-View(survivorship_percents_acc_field)
-```
-
-```{r}
-#make acclimation variable a factor
-survivorship_percents_acc_field$acclimation <- as.factor(survivorship_percents_acc_field$acclimation)
-```
-
-```{r}
-#box plot comparing field survivorship over acclimation types
-df <- survivorship_percents_acc_field
-b4 <- ggplot(df, aes(x = acclimation, y = percent)) +
-  geom_boxplot() +
-  geom_jitter(aes(color = location))
-b4 <- b4 + scale_x_discrete(name = "Acclimation Treatment") + scale_y_continuous(name = "Survivorship Percent")
-b4 <- b4 + theme(legend.position = "none")
-b4
-```
-
-```{r}
-#box plot comparing field survivorship over acclimation types
-df <- survivorship_percents_acc_field
-b5 <- ggplot(df, aes(x = genotype, y = percent)) +
-  geom_boxplot() +
-  geom_jitter(aes(color = genotype))
-b5 <- b5 + scale_x_discrete(name = "Genotype") + scale_y_continuous(name = "Survivorship Percent") + theme(legend.position = "none")
-b5 
-```
-
-```{r}
-#load survivorship curve data 
-survivorship_curves <- read.csv('2019_PR_survivorshipcurves.csv')
-View(survivorship_curves)
-```
-
-```{r}
-#create new data frame with only field survivorship
-#add cage percents
-survivorship_curves_field <- subset(survivorship_curves, location == "field", select = c("location","proportion","days","genotype"))
-View(survivorship_curves_field)
-```
-
-```{r}
-#survivorship curve of all genotypes after outplanting
-df <- survivorship_curves_field
-l2 <- ggplot(df, aes(x = days, y = proportion, group = genotype, color = genotype)) +
-  geom_line() +
-  ylim(0, 1.0)
-l2 <- l2 + scale_x_continuous(name = "Time (days)") + scale_y_continuous(name = "Survival")
-l2
-```
-
-```{r}
-#load average survivorship curve data 
-survivorship_curves_avg <- read.csv('2019_PR_survivorshipcurves_avg.csv')
-View(survivorship_curves_avg)
-```
-
-```{r}
-#line graph of average survivorship data, compared between cage and field
-df <- survivorship_curves_avg
-l3 <- ggplot(df, aes(x = days, y = proportion, group = location, color = location)) +
-  geom_line() +
-  ylim(0,1.0)
-l3 <- l3 + scale_x_continuous(name = "Time (days)") + scale_y_continuous(name = "Survival")
-l3
-```
-
-```{r}
 #load survminer formatted field data
 survminer_field <- read.csv("2019_PR_survminer_field.csv")
-View(survminer_field)
-```
 
-```{r}
 #reformat all dates to POSIXt format using lubridate and delete old columns
 survminer_field$ymd.planted=mdy(survminer_field$date.planted)
 survminer_field$ymd.mortality=mdy(survminer_field$date.of.mortality)
-survminer_field <- select(survminer_field, -date.planted, -date.of.mortality)
-```
+#survminer_field <- select(survminer_field, -date.planted, -date.of.mortality)
 
-```{r}
 #calculate number of days between planting and mortality 
 survminer_field$days.alive <- difftime(survminer_field$ymd.mortality ,survminer_field$ymd.planted , units = c("days"))
+
+#load total survminer data
+survminer_all <- read.csv("2019_PR_survminer_all.csv")
+
+#load survminer formatted cage data
+survminer_cage <- read.csv("2019_PR_survminer_cage.csv")
+
+#reformat all dates to POSIXt format using lubridate and delete old columns
+survminer_cage$ymd.cage=mdy(survminer_cage$date.put.in.cage)
+survminer_cage$ymd.end=mdy(survminer_cage$date.sampled.or.planted)
+#survminer_cage <- select(survminer_cage, -date.put.in.cage, -date.sampled.or.planted)
+
+#calculate number of days between put in the cage and being taken out
+survminer_cage$days.alive <- difftime(survminer_cage$ymd.end ,survminer_cage$ymd.cage , units = c("days"))
+
+#load growth data
+growth_cage <- read.csv("2019_PR_Ofav_growth_CAGE.csv")
+growth_field <- read.csv("2019_PR_Ofav_growth_FIELD.csv")
+
+#reformat all dates to POSIXt format using lubridate
+growth_cage$ymd.date=mdy(growth_cage$date)
+growth_field$ymd.date=mdy(growth_field$date)
+
+#calculate individual growth rates on cage data
+growth_cage <- ddply(growth_cage,"coral.ID",transform,
+         growth=c(NA,exp(diff(log(area)))-1))
+
+#calculate individual growth rates on field data
+growth_field <- ddply(growth_field,"coral.ID",transform,
+         growth=c(NA,exp(diff(log(area)))-1))
+
+#combine cage and field data into one dataset
+growth_total <- rbind(growth_cage, growth_field)
+
+#create percent growth column by multiplying growth rate by 100 
+growth_total$perc.growth <- growth_total$growth*100
+#View(growth_total)
+
+#make sure acclimation treatment is being read as a factor 
+growth_total$acclimation <- as.factor(growth_total$acclimation)
+
+#load and view data
+predation_alt <- read.csv('2019_PR_predation_alt.csv')
+
+#reformat all dates to POSIXt format using lubridate
+predation_alt$ymd.mortality=mdy(predation_alt$date.of.mortality)
+predation_alt$ymd.planted=mdy(predation_alt$date.sampled.or.planted)
+
+#delete old date columns with dplyr
+#predation <- select(predation, -date.of.mortality, -date.sampled.or.planted)
+
+#create new columns with dates between fragmenting and mortality, both known and assumed
+predation_alt$daysalive <- difftime(predation_alt$ymd.mortality ,predation_alt$ymd.planted , units = c("days"))
+
+#load growth data
+growth_total <- read.csv("2019_PR_Ofav_growth_TOTAL.csv")
 ```
 
 ```{r}
-#create a survival object
-Surv(survminer_field$days.alive, survminer_field$censored)[1:10]
-```
+#create survival and survfit objects for all later charts
 
-```{r}
-#create a survfit object using the Kaplan-Meier method
+Surv(survminer_field$days.alive, survminer_field$censored)
+
 surv_object <- Surv(survminer_field$days.alive, survminer_field$censored)
-surv_object
+
+surv_object2 <- Surv(survminer_cage$days.alive, survminer_cage$censored)
+
+surv_object3 <- Surv(survminer_all$days.alive, survminer_all$censored)
 ```
 
-```{r}
-#fit Kaplan-Meier curves
-fit1 <- survfit(surv_object ~ 1, data = survminer_field)
-fit1
-```
 
 ```{r}
-#Kaplan-Meier plot: method 2
-s2 <- ggsurvplot(
-  fit = survfit(surv_object ~ 1, data = survminer_field),
-  xlab = "Time (days)",
-  ylab = "Overall survival probability")
-s2
+#Kaplan-Meier field data plots separated by acclimation
+fit3 <- survfit(surv_object ~ acclimation, data = survminer_field)
+fig3 <- ggsurvplot(fit3, data = survminer_field, pval = TRUE, 
+                 palette = c("#23BF00","#00C871","#008FD2","#0D00DB","#B900E5"), legend = "bottom", legend.title = "Acclimation Group", legend.labs = c("Group 1: Three Months","Group 2: Two Months","Group 3: One Month","Group 4: Two Weeks","Group 5: No Acclimation")) 
+fig3 <- fig3 + guides(colour = guide_legend(ncol = 2))
+fig3 <- fig3 + xlab("Days")
+fig3
 ```
+
+
+```{r}
+#Kaplan-Meier total data plots separated by fragment location
+fit5 <- survfit(surv_object3 ~ location, subset = location %in% c("field","cage"), data = survminer_all)
+fig4 <- ggsurvplot(fit5, data = survminer_all, pval = TRUE, legend = "bottom", legend.title = "Fragment Location", legend.labs = c("Cage","Outplanting"), xlim = c(0, 85))
+fig4 <- fig4 + xlab("Days")
+fig4 <- fig4 + guides(colour = guide_legend(nrow = 2))
+fig4
+```
+
 
 ```{r}
 #Kaplan-Meier field data plots separated by genotype
 fit2 <- survfit(surv_object ~ genotype, data = survminer_field)
-s3 <- ggsurvplot(fit2, data = survminer_field, pval = TRUE)
-s3
+fig5 <- ggsurvplot(fit2, data = survminer_field, pval = TRUE, legend = "bottom", legend.title = "Genotype", legend.labs = c("AZ","BY","CX","DW","EV","FU","GT","HS","IR","JQ"), xlim = c(0, 85))
+fig5 <- fig5 + guides(colour = guide_legend(nrow = 2))
+fig5 <- fig5 + xlab("Days")
+fig5
 ```
+
 
 ```{r}
-#Kaplan-Meier field data plots separated by genotype
-fit3 <- survfit(surv_object ~ acclimation, data = survminer_field)
-s4 <- ggsurvplot(fit3, data = survminer_field, pval = TRUE)
-s4
+#Kaplan-Meier field data plots separated by bite presence from alt data
+surv_object_p <- Surv(predation_alt$daysalive, predation_alt$censored)
+
+fit_p <- survfit(surv_object_p ~ bite.presence, data = predation_alt)
+fig6 <- ggsurvplot(fit_p, data = predation_alt, pval = TRUE, legend = "bottom", legend.title = "Bite Presence", legend.labs = c("No predation", "Predation"), xlim = c(0, 85))
+fig6 <- fig6 + xlab("Days")
+fig6
 ```
+
 
 ```{r}
-#load survminer formatted cage data
-survminer_cage <- read.csv("2019_PR_survminer_cage.csv")
-View(survminer_cage)
+#box plot comparing growth rates in cage and in field
+MinMeanSEMMax <- function(x) {
+  v <- c(min(x), mean(x) - sd(x)/sqrt(length(x)), mean(x), mean(x) + sd(x)/sqrt(length(x)), max(x))
+  names(v) <- c("ymin", "lower", "middle", "upper", "ymax")
+  v
+}
+fig7 <- ggplot(growth_total, aes(x = location, y = growth)) +
+  geom_jitter(aes(color = genotype)) + 
+  labs(color = "Genotype")
+fig7 <- fig7 + stat_summary(fun.data = MinMeanSEMMax, geom = "boxplot")
+fig7 <- fig7 + ylab(bquote('Average Growth per Month '(cm^2)))
+fig7 <- fig7 + scale_x_discrete(name = NULL, labels = c("Acclimation Cage","Outplanting"))
+fig7 <- fig7 + theme_bw()
+fig7 <- fig7 + annotate("label", x = 0.8, y = 2.7, label = "p < 0.001")
+fig7
 ```
+
 
 ```{r}
-#reformat all dates to POSIXt format using lubridate and delete old columns
-survminer_cage$ymd.cage=mdy(survminer_cage$date.put.in.cage)
-survminer_cage$ymd.end=mdy(survminer_cage$date.sampled.or.planted)
-survminer_cage <- select(survminer_cage, -date.put.in.cage, -date.sampled.or.planted)
+#box plot comparing growth rates between genotypes
+MinMeanSEMMax <- function(x) {
+  v <- c(min(x), mean(x) - sd(x)/sqrt(length(x)), mean(x), mean(x) + sd(x)/sqrt(length(x)), max(x))
+  names(v) <- c("ymin", "lower", "middle", "upper", "ymax")
+  v
+}
+fig8 <- ggplot(growth_total, aes(x = reorder(genotype,growth,na.rm = TRUE), y = growth, color = genotype)) +
+  geom_jitter() 
+fig8 <- fig8 + stat_summary(fun.data = MinMeanSEMMax, geom = "boxplot")
+fig8 <- fig8 + ylab(bquote('Average Growth per Month '(cm^2)))
+fig8 <- fig8 + scale_x_discrete(name = "Genotype", labels = c("AZ","IR","JQ","EV","GT","CX","DW","BY","FU","HS"))
+fig8 <- fig8 + stat_compare_means(aes(label = paste0("p = ", ..p.format..)), label.x = 1, label.y = 250)
+fig8 <- fig8 + theme_bw()
+fig8 <- fig8 + theme(legend.position = "none")
+fig8 <- fig8 + ylim(-1,3)
+fig8
 ```
+
 
 ```{r}
-#calculate number of days between put in the cage and being taken out
-survminer_cage$days.alive <- difftime(survminer_cage$ymd.end ,survminer_cage$ymd.cage , units = c("days"))
+#box plot comparing growth rates between acclimation times
+growth_total$acclimation <- as.factor(growth_total$acclimation)
+figS1 <- ggplot(growth_total, aes(x = acclimation, y = growth, color = acclimation)) +
+  geom_boxplot() +
+  geom_jitter() +
+  scale_color_manual(values=c("#23BF00","#00C871","#008FD2","#0D00DB","#B900E5"))
+figS1 <- figS1 + scale_x_discrete(name = "Acclimation Group", labels = c("Group 1: Three Months","Group 2: Two Months","Group 3: One Month","Group 4: Two Weeks","Group 5: No Acclimation"))
+figS1 <- figS1 + theme_bw()
+figS1 <- figS1 + theme(legend.position = "none")
+figS1 <- figS1 + ylab(bquote('Average Growth per Month '(cm^2)))
+figS1 <- figS1 + stat_compare_means(aes(label = paste0("p = ", ..p.format..)), label.x = 5, label.y = 2.7)
+figS1 <- figS1 + ylim(-1,3)
+figS1
 ```
-
-```{r}
-#create a survfit object using the Kaplan-Meier method
-surv_object2 <- Surv(survminer_cage$days.alive, survminer_cage$censored)
-surv_object2
-```
-
-```{r}
-#Kaplan-Meier plot of total cage data
-s5 <- ggsurvplot(
-  fit = survfit(surv_object2 ~ 1, data = survminer_cage),
-  xlab = "Days",
-  ylab = "Overall survival probability")
-s5
-```
-
-```{r}
-#Kaplan-Meier cage data plots separated by genotype
-fit4 <- survfit(surv_object2 ~ genotype, data = survminer_cage)
-s6 <- ggsurvplot(fit4, data = survminer_cage, pval = TRUE)
-s6
-```
-
-```{r}
-#load total survminer data
-survminer_all <- read.csv("2019_PR_survminer_all.csv")
-View(survminer_all)
-```
-
-```{r}
-#create a survfit object using the Kaplan-Meier method
-surv_object3 <- Surv(survminer_all$days.alive, survminer_all$censored)
-surv_object3
-```
-
-```{r}
-#Kaplan-Meier total data plots separated by genotype
-fit5 <- survfit(surv_object3 ~ location, data = survminer_all)
-s7 <- ggsurvplot(fit5, data = survminer_all, pval = TRUE)
-s7
-```
-
-```{r}
-#Kaplan-Meier total data plots separated by genotype
-fit6 <- survfit(surv_object3 ~ genotype, data = survminer_all)
-s8 <- ggsurvplot(fit6, data = survminer_all, pval = TRUE)
-s8
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-.
