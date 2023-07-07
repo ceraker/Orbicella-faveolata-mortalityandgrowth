@@ -116,17 +116,35 @@ surv_object2 <- Surv(survminer_cage$days.alive, survminer_cage$censored)
 surv_object3 <- Surv(survminer_all$days.alive, survminer_all$censored)
 ```
 
-
 ```{r}
 #Kaplan-Meier field data plots separated by acclimation
 fit3 <- survfit(surv_object ~ acclimation, data = survminer_field)
 fig3 <- ggsurvplot(fit3, data = survminer_field, pval = TRUE, 
                  palette = c("#23BF00","#00C871","#008FD2","#0D00DB","#B900E5"), legend = "bottom", legend.title = "Acclimation Group", legend.labs = c("Group 1: Three Months","Group 2: Two Months","Group 3: One Month","Group 4: Two Weeks","Group 5: No Acclimation")) 
 fig3 <- fig3 + guides(colour = guide_legend(ncol = 2))
-fig3 <- fig3 + xlab("Days")
+fig3 <- fig3 + xlab("Days") 
+fig3$plot <- fig3$plot + 
+              ggplot2::annotate("text", 
+                                x = 93, y = 0.44,
+                                label = "a", size = 2.5)
+fig3$plot <- fig3$plot + 
+              ggplot2::annotate("text", 
+                                x = 93, y = 0.39,
+                                label = "b", size = 2.5)
+fig3$plot <- fig3$plot + 
+              ggplot2::annotate("text", 
+                                x = 93, y = 0.35,
+                                label = "a", size = 2.5)
+fig3$plot <- fig3$plot + 
+              ggplot2::annotate("text", 
+                                x = 93, y = 0.26,
+                                label = "b", size = 2.5)
+fig3$plot <- fig3$plot + 
+              ggplot2::annotate("text", 
+                                x = 93, y = 0.22,
+                                label = "c", size = 2.5)
 fig3
 ```
-
 
 ```{r}
 #Kaplan-Meier total data plots separated by fragment location
@@ -141,9 +159,49 @@ fig4
 ```{r}
 #Kaplan-Meier field data plots separated by genotype
 fit2 <- survfit(surv_object ~ genotype, data = survminer_field)
-fig5 <- ggsurvplot(fit2, data = survminer_field, pval = TRUE, legend = "bottom", legend.title = "Genotype", legend.labs = c("AZ","BY","CX","DW","EV","FU","GT","HS","IR","JQ"), xlim = c(0, 85))
+fig5 <- ggsurvplot(fit2, data = survminer_field, pval = TRUE, legend = "bottom", legend.title = "Genotype", legend.labs = c("AZ","BY","CX","DW","EV","FU","GT","HS","IR","JQ"), xlim = c(0, 100))
 fig5 <- fig5 + guides(colour = guide_legend(nrow = 2))
 fig5 <- fig5 + xlab("Days")
+fig5$plot <- fig5$plot + 
+              ggplot2::annotate("text", 
+                                x = 94, y = 0.62,
+                                label = "bc", size = 2.5)
+fig5$plot <- fig5$plot + 
+              ggplot2::annotate("text", 
+                                x = 94, y = 0.47,
+                                label = "ab", size = 2.5)
+fig5$plot <- fig5$plot + 
+              ggplot2::annotate("text", 
+                                x = 94, y = 0.43,
+                                label = "c", size = 2.5)
+fig5$plot <- fig5$plot + 
+              ggplot2::annotate("text", 
+                                x = 94, y = 0.39,
+                                label = "cd", size = 2.5)
+fig5$plot <- fig5$plot + 
+              ggplot2::annotate("text", 
+                                x = 94, y = 0.35,
+                                label = "c", size = 2.5)
+fig5$plot <- fig5$plot + 
+              ggplot2::annotate("text", 
+                                x = 94, y = 0.30,
+                                label = "c", size = 2.5)
+fig5$plot <- fig5$plot + 
+              ggplot2::annotate("text", 
+                                x = 94, y = 0.25,
+                                label = "ab", size = 2.5)
+fig5$plot <- fig5$plot + 
+              ggplot2::annotate("text", 
+                                x = 94, y = 0.19,
+                                label = "a", size = 2.5)
+fig5$plot <- fig5$plot + 
+              ggplot2::annotate("text", 
+                                x = 94, y = 0.12,
+                                label = "d", size = 2.5)
+fig5$plot <- fig5$plot + 
+              ggplot2::annotate("text", 
+                                x = 94, y = 0.07,
+                                label = "abc", size = 2.5)
 fig5
 ```
 
