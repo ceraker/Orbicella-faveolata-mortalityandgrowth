@@ -96,47 +96,8 @@ inset
 ```{r}
 fig1 = ggdraw() +
   draw_plot(mapplot) +
-  draw_plot(inset, x = 0.101, y = 0.7, width = 0.24, height = 0.24)
+  draw_plot(inset, x = 0.101, y = 0.75, width = 0.24, height = 0.24)
 fig1
 ```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-.
